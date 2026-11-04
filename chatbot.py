@@ -1,32 +1,13 @@
-HANDOFF_WORDS = ["address", "payment", "card", "shipping", "human"]
+HANDOFF_WORDS = ["address", "payment", "card", "human"]
 
 
 class SupportChatbot:
-    def __init__(self, name, instructions, order_tool):
-        self.name = name
-        self.instructions = instructions
-        self.order_tool = order_tool
-        self.history = []
-
     def respond(self, user_message):
         """Record the user's message, choose a reply, record it, and return it"""
         self.history.append({"role": "user", "content": user_message})
         reply = self.choose_reply(user_message)
         self.history.append({"role": "assistant", "content": reply})
         return reply
-
-    def choose_reply(self, user_message):
-        """Chose a reply with keyword rules. This is the mock part"""
-        text = user_message.lower()
-        if self.needs_human(text):
-            return (
-                " I cannot help with that here. I am passing you on to a human agent."
-            )
-        if "order" in text:
-            return self.order_reply(user_message)
-        if "hello" in text:
-            return f"Hello! I am {self.name}. I can check an order status for you."
-        return " I am not sure how to respond to that. Can you ask about an order?"
 
     def needs_human(self, text):
         """Return True if the message is about something a person might handle"""
@@ -51,3 +32,37 @@ class SupportChatbot:
             if message["role"] == "user":
                 count += 1
         return count
+
+    def __init__(self, name, instructions, order_tool, stock_tool, model):
+        """Set up one chatbot with a name, instructions, tools, model, and history."""
+        self.name = name
+        self.instructions = instructions
+        self.order_tool = order_tool
+        self.stock_tool = stock_tool
+        self.model = model
+        self.history = []
+
+    def choose_reply(self, user_message):
+        """Use a rule when one applies. Otherwise ask the model."""
+        text = user_message.lower()
+        if self.needs_human(text):
+            return "I can't help with that here. I'm passing you to a human agent."
+        if "order" in text:
+            return self.order_reply(user_message)
+        if "stock" in text:
+            return self.stock_reply(user_message)
+        return self.model_reply()
+
+    def model_reply(self):
+        """Ask the model for a reply. Give a safe answer if the model has none."""
+        reply = self.model.reply(self.instructions, self.history)
+        if reply is None:
+            return "Sorry, I can't answer that right now. Please try again in a moment."
+        return reply
+
+    def stock_reply(self, user_message):
+        item = self.stock_tool.find_item(user_message)
+        if item is None:
+            return "Which item are you asking about?"
+        stock = self.stock_tool.get_stock(item)
+        return f"There are {stock} {item}s in stock."

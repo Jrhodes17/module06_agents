@@ -1,4 +1,9 @@
-HANDOFF_WORDS = ["book", "schedule", "change", "cancel",]
+HANDOFF_WORDS = [
+    "book",
+    "schedule",
+    "change",
+    "cancel",
+]
 
 
 class ApointmentAssistant:
